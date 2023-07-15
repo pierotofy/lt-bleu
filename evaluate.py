@@ -8,12 +8,21 @@ import ctranslate2
 import threading
 import urllib.request
 import argparse
+import logging
+
+sacrelogger = logging.getLogger('sacrebleu')
+sacrelogger.setLevel(logging.CRITICAL)
 
 parser = argparse.ArgumentParser(description='Evaluate BLEU scores for LibreTranslate and argos-translate models')
 parser.add_argument('--models',
     type=str,
     default="all",
     help='Language models to evaluate (comma separated). Default: all')
+parser.add_argument('--sentence',
+    type=int,
+    default=None,
+    help='Sentence index to evaluate. Default: all')
+
 args = parser.parse_args()
 
 datasets_path = os.path.join(os.path.dirname(__file__), "datasets")
@@ -188,6 +197,10 @@ def process_flores(pkg):
 
     src_text = [line.rstrip('\n') for line in open(src_f, encoding="utf-8")]
     tgt_text = [line.rstrip('\n') for line in open(tgt_f, encoding="utf-8")]
+    
+    if args.sentence is not None:
+        src_text = [src_text[args.sentence]]
+        tgt_text = [tgt_text[args.sentence]]
 
     translation_obj = data["model"].translate_batch(
         encode(src_text, data["tokenizer"]),
@@ -199,6 +212,9 @@ def process_flores(pkg):
         decode(tokens.hypotheses[0], data["tokenizer"])
         for tokens in translation_obj
     ]
+    
+    print(f"• {src_text[0]}\n• {tgt_text[0]}\n• {' '.join(translated_text)}")
+
     bleu_scores[f"{pkg.from_code}-{pkg.to_code}"] = round(corpus_bleu(
         translated_text, [[x] for x in tgt_text], tokenize="flores200"
     ).score, 5)
