@@ -150,7 +150,9 @@ from_code, to_code = args.model.split("-")
 tgt_lang = nllb_langs[to_code]
 src_lang = nllb_langs[from_code]
 
-ct_model_path = os.path.join("datasets/nllb/nllb-200-distilled-600M-int8")
+#ct_model_path = os.path.join("datasets/nllb/nllb-200-distilled-600M-int8")
+#ct_model_path = os.path.join("datasets/nllb/ct2-nllb-200-distilled-1.2B-int8")
+ct_model_path = os.path.join("datasets/nllb/nllb-200-3.3B-int8")
 sp_model_path = os.path.join("datasets/nllb/flores200_sacrebleu_tokenizer_spm.model")
 
 device = "cuda" if ctranslate2.get_cuda_device_count() > 0 else "cpu"
