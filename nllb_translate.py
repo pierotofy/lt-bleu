@@ -144,6 +144,14 @@ parser.add_argument('--force',
     action='store_true',
     default=False,
     help='Force overwrite file')
+parser.add_argument('--device-index',
+    type=str,
+    default=None,
+    help='CUDA device indexes')
+parser.add_argument('--batch-size',
+    type=int,
+    default=2048,
+    help='Batch size')
 
 args = parser.parse_args()
 
@@ -162,11 +170,17 @@ ct_model_path = os.path.join("datasets/nllb/nllb-200-3.3B-int8")
 sp_model_path = os.path.join("datasets/nllb/flores200_sacrebleu_tokenizer_spm.model")
 
 device = "cuda" if ctranslate2.get_cuda_device_count() > 0 else "cpu"
+device_index = [0]
+
+if device == "cuda":
+    device_index = [0]
+    if args.device_index is not None:
+        device_index = [int(d) for d in args.device_index.split(",")]
 
 sp = spm.SentencePieceProcessor()
 sp.load(sp_model_path)
 
-translator = ctranslate2.Translator(ct_model_path, device)
+translator = ctranslate2.Translator(ct_model_path, device, device_index=device_index)
 
 
 src_text = [line.rstrip('\n') for line in open(args.file, encoding="utf-8")]
@@ -179,7 +193,7 @@ src_subworded = [[src_lang] + sent + ["</s>"] for sent in src_subworded]
 
 # Translate the source sentences
 translator = ctranslate2.Translator(ct_model_path, device=device, compute_type="auto")
-translations_subworded = translator.translate_batch(src_subworded, batch_type="tokens", max_batch_size=2048, beam_size=5, target_prefix=tgt_prefix, return_scores=False)
+translations_subworded = translator.translate_batch(src_subworded, batch_type="tokens", max_batch_size=args.batch_size, beam_size=5, target_prefix=tgt_prefix, return_scores=False)
 translations_subworded = [translation[0]['tokens'] for translation in translations_subworded]
 for translation in translations_subworded:
   if tgt_lang in translation:
