@@ -147,6 +147,15 @@ parser.add_argument('--text',
     type=str,
     default=None,
     help='Text to evaluate. Default: none')
+parser.add_argument('--size',
+    type=str,
+    choices=['600M', '1.2B', '3.3B'],
+    default='600M',
+    help='NLLB model. Default: 600M')
+parser.add_argument('--beam-size',
+    type=int,
+    default=4,
+    help='Beam size')
 
 args = parser.parse_args()
 
@@ -154,9 +163,15 @@ from_code, to_code = args.model.split("-")
 tgt_lang = nllb_langs[to_code]
 src_lang = nllb_langs[from_code]
 
-#ct_model_path = os.path.join("datasets/nllb/nllb-200-distilled-600M-int8")
-#ct_model_path = os.path.join("datasets/nllb/ct2-nllb-200-distilled-1.2B-int8")
-ct_model_path = os.path.join("datasets/nllb/nllb-200-3.3B-int8")
+if args.size == '600M':
+    ct_model_path = os.path.join("datasets/nllb/nllb-200-distilled-600M-int8")
+elif args.size == '1.2B':
+    ct_model_path = os.path.join("datasets/nllb/ct2-nllb-200-distilled-1.2B-int8")
+elif args.size == '3.3B':
+    ct_model_path = os.path.join("datasets/nllb/nllb-200-3.3B-int8")
+else:
+    print("Invalid model")
+    exit(1)
 #ct_model_path = os.path.join("datasets/orig-nllb/ct2-nllb-3.3B")
 
 sp_model_path = os.path.join("datasets/nllb/nllb-tokenizer-3.3B/sentencepiece.bpe.model")
@@ -169,7 +184,7 @@ device = "cuda" if ctranslate2.get_cuda_device_count() > 0 else "cpu"
 sp = spm.SentencePieceProcessor()
 sp.load(sp_model_path)
 
-translator = ctranslate2.Translator(ct_model_path, device)
+translator = ctranslate2.Translator(ct_model_path, device, inter_threads=os.cpu_count())
 
 datasets_path = os.path.join(os.path.dirname(__file__), "datasets")
 flores_dataset = os.path.join(datasets_path, "flores200_dataset", "dev")
@@ -191,11 +206,11 @@ tgt_prefix = [[tgt_lang]] * len(src_text)
 # Subword the source sentences
 src_subworded = sp.encode_as_pieces(src_text)
 src_subworded = [[src_lang] + sent + ["</s>"] for sent in src_subworded]
-print("First subworded source sentence:", src_subworded[0], sep="\n")
+#print("First subworded source sentence:", src_subworded[0], sep="\n")
 
 # Translate the source sentences
 translator = ctranslate2.Translator(ct_model_path, device=device)
-translations_subworded = translator.translate_batch(src_subworded, batch_type="tokens", max_batch_size=2024, beam_size=5, target_prefix=tgt_prefix, return_scores=False)
+translations_subworded = translator.translate_batch(src_subworded, batch_type="tokens", max_batch_size=2024, beam_size=args.beam_size, target_prefix=tgt_prefix, return_scores=False)
 translations_subworded = [translation[0]['tokens'] for translation in translations_subworded]
 for translation in translations_subworded:
   if tgt_lang in translation:

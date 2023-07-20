@@ -152,6 +152,15 @@ parser.add_argument('--batch-size',
     type=int,
     default=2048,
     help='Batch size')
+parser.add_argument('--model-size',
+    type=str,
+    choices=['600M', '1.2B', '3.3B'],
+    default='600M',
+    help='NLLB model. Default: 600M')
+parser.add_argument('--beam-size',
+    type=int,
+    default=4,
+    help='Beam size')
 
 args = parser.parse_args()
 
@@ -164,9 +173,16 @@ if os.path.isfile(outfile) and not args.force:
     print("File exists (use --force): %s exiting..." % outfile)
     exit(1)
 
-#ct_model_path = os.path.join("datasets/nllb/nllb-200-distilled-600M-int8")
-#ct_model_path = os.path.join("datasets/nllb/ct2-nllb-200-distilled-1.2B-int8")
-ct_model_path = os.path.join("datasets/nllb/nllb-200-3.3B-int8")
+if args.model_size == '600M':
+    ct_model_path = os.path.join("datasets/nllb/nllb-200-distilled-600M-int8")
+elif args.model_size == '1.2B':
+    ct_model_path = os.path.join("datasets/nllb/ct2-nllb-200-distilled-1.2B-int8")
+elif args.model_size == '3.3B':
+    ct_model_path = os.path.join("datasets/nllb/nllb-200-3.3B-int8")
+else:
+    print("Invalid model")
+    exit(1)
+
 sp_model_path = os.path.join("datasets/nllb/flores200_sacrebleu_tokenizer_spm.model")
 
 device = "cuda" if ctranslate2.get_cuda_device_count() > 0 else "cpu"
@@ -192,8 +208,8 @@ src_subworded = sp.encode_as_pieces(src_text)
 src_subworded = [[src_lang] + sent + ["</s>"] for sent in src_subworded]
 
 # Translate the source sentences
-translator = ctranslate2.Translator(ct_model_path, device=device, compute_type="auto")
-translations_subworded = translator.translate_batch(src_subworded, batch_type="tokens", max_batch_size=args.batch_size, beam_size=5, target_prefix=tgt_prefix, return_scores=False)
+translator = ctranslate2.Translator(ct_model_path, device=device, compute_type="auto", inter_threads=os.cpu_count())
+translations_subworded = translator.translate_batch(src_subworded, batch_type="tokens", max_batch_size=args.batch_size, beam_size=args.beam_size, target_prefix=tgt_prefix, return_scores=False)
 translations_subworded = [translation[0]['tokens'] for translation in translations_subworded]
 for translation in translations_subworded:
   if tgt_lang in translation:
