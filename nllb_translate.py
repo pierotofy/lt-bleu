@@ -178,8 +178,8 @@ src_subworded = sp.encode_as_pieces(src_text)
 src_subworded = [[src_lang] + sent + ["</s>"] for sent in src_subworded]
 
 # Translate the source sentences
-translator = ctranslate2.Translator(ct_model_path, device=device)
-translations_subworded = translator.translate_batch(src_subworded, batch_type="tokens", max_batch_size=2024, beam_size=4, target_prefix=tgt_prefix)
+translator = ctranslate2.Translator(ct_model_path, device=device, compute_type="auto")
+translations_subworded = translator.translate_batch(src_subworded, batch_type="tokens", max_batch_size=2048, beam_size=5, target_prefix=tgt_prefix, return_scores=False)
 translations_subworded = [translation[0]['tokens'] for translation in translations_subworded]
 for translation in translations_subworded:
   if tgt_lang in translation:
