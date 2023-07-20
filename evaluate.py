@@ -22,6 +22,10 @@ parser.add_argument('--sentence',
     type=int,
     default=None,
     help='Sentence index to evaluate. Default: all')
+parser.add_argument('--text',
+    type=str,
+    default=None,
+    help='Text to evaluate. Default: none')
 
 args = parser.parse_args()
 
@@ -201,6 +205,11 @@ def process_flores(pkg):
     if args.sentence is not None:
         src_text = [src_text[args.sentence]]
         tgt_text = [tgt_text[args.sentence]]
+    
+    if args.text is not None:
+        src_text = [args.text]
+        tgt_text = [""]
+        
 
     translation_obj = data["model"].translate_batch(
         encode(src_text, data["tokenizer"]),
