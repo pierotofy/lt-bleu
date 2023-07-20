@@ -143,6 +143,10 @@ parser.add_argument('--sentence',
     type=int,
     default=None,
     help='Sentence index to evaluate. Default: all')
+parser.add_argument('--text',
+    type=str,
+    default=None,
+    help='Text to evaluate. Default: none')
 
 args = parser.parse_args()
 
@@ -153,7 +157,12 @@ src_lang = nllb_langs[from_code]
 #ct_model_path = os.path.join("datasets/nllb/nllb-200-distilled-600M-int8")
 #ct_model_path = os.path.join("datasets/nllb/ct2-nllb-200-distilled-1.2B-int8")
 ct_model_path = os.path.join("datasets/nllb/nllb-200-3.3B-int8")
-sp_model_path = os.path.join("datasets/nllb/flores200_sacrebleu_tokenizer_spm.model")
+#ct_model_path = os.path.join("datasets/orig-nllb/ct2-nllb-3.3B")
+
+sp_model_path = os.path.join("datasets/nllb/nllb-tokenizer-3.3B/sentencepiece.bpe.model")
+
+# TODO: try to fix Chinese sentence 100
+
 
 device = "cuda" if ctranslate2.get_cuda_device_count() > 0 else "cpu"
 
@@ -172,6 +181,9 @@ tgt_text = [line.rstrip('\n') for line in open(tgt_f, encoding="utf-8")]
 if args.sentence is not None:
     src_text = [src_text[args.sentence]]
     tgt_text = [tgt_text[args.sentence]]
+if args.text is not None:
+    src_text = [args.text]
+    tgt_text = [""]
 
 src_text = [sent.strip() for sent in src_text]
 tgt_prefix = [[tgt_lang]] * len(src_text)
@@ -183,7 +195,7 @@ print("First subworded source sentence:", src_subworded[0], sep="\n")
 
 # Translate the source sentences
 translator = ctranslate2.Translator(ct_model_path, device=device)
-translations_subworded = translator.translate_batch(src_subworded, batch_type="tokens", max_batch_size=2024, beam_size=4, target_prefix=tgt_prefix)
+translations_subworded = translator.translate_batch(src_subworded, batch_type="tokens", max_batch_size=2024, beam_size=5, target_prefix=tgt_prefix, return_scores=False)
 translations_subworded = [translation[0]['tokens'] for translation in translations_subworded]
 for translation in translations_subworded:
   if tgt_lang in translation:
