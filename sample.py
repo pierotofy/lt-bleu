@@ -30,12 +30,24 @@ if os.path.isfile(target_dst):
     exit(1)
 
 print("Reading %s" % args.source)
-with open(args.source) as f:
-    source_lines = [l.strip() for l in f.read().split("\n")]
+source_lines = []
+with open(args.source, "r", encoding="utf-8") as f:
+    while True:
+        line = f.readline().strip()
+        if line == '':
+            break
+        source_lines.append(line)
+    # source_lines = [l.strip() for l in f.read().split("\n")]
 
 print("Reading %s" % args.target)
-with open(args.target) as f:
-    target_lines = [l.strip() for l in f.read().split("\n")]
+target_lines = []
+with open(args.target, "r", encoding="utf-8") as f:
+    while True:
+        line = f.readline().strip()
+        if line == '':
+            break
+        target_lines.append(line)
+    #target_lines = [l.strip() for l in f.read().split("\n")]
 
 if len(source_lines) != len(target_lines):
     print("Files have different number of lines (%s vs. %s)" % (len(source_lines), len(target_lines)))
@@ -44,8 +56,8 @@ if len(source_lines) != len(target_lines):
 
 
 sampled = {}
-with open(source_dst, "w") as fs:
-    with open(target_dst, "w") as ft:
+with open(source_dst, "w", encoding="utf-8") as fs:
+    with open(target_dst, "w", encoding="utf-8") as ft:
         for i in range(args.samples):
             r = random.randint(0, len(target_lines))
             if not r in sampled:
