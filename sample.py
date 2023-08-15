@@ -58,12 +58,15 @@ if len(source_lines) != len(target_lines):
 sampled = {}
 with open(source_dst, "w", encoding="utf-8") as fs:
     with open(target_dst, "w", encoding="utf-8") as ft:
-        for i in range(args.samples):
+        i = 0
+        num_samples = min(len(source_lines), args.samples)
+        while i < num_samples:
             r = random.randint(0, len(target_lines))
             if not r in sampled:
                 fs.write(source_lines[r] + "\n")
                 ft.write(target_lines[r] + "\n")
                 sampled[r] = True
+                i += 1
 
 print("Wrote %s" % source_dst)
 print("Wrote %s" % target_dst)
