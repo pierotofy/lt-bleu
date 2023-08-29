@@ -1,0 +1,148 @@
+#!/usr/bin/env python3
+
+# https://github.com/tatuylonen/wiktextract
+
+import os
+import json
+import argparse
+from pathlib import Path
+
+# Configure
+
+parser = argparse.ArgumentParser()
+parser.add_argument("wikidata", help="path to Wiktionary JSON file")
+parser.add_argument("wikidata2", nargs='?', help="path to second Wiktionary JSON file (optional)")
+parser.add_argument("--source", type=str, default='en', help="source language code. Default: %(default)s")
+parser.add_argument("--target", type=str, default='es', help="target language code. Default: %(default)s")
+parser.add_argument("--force", help="overwrite existing files if they already exists. Default: no", action="store_true")
+
+args = parser.parse_args()
+sl = args.source
+tl = args.target
+
+# Read JSON
+wikidata = []
+with open(args.wikidata, 'r', encoding='utf-8') as f:
+    for line in f:
+        wikidata.append(json.loads(line))
+if args.wikidata2:
+    with open(args.wikidata2, 'r', encoding='utf-8') as f:
+        for line in f:
+            wikidata.append(json.loads(line))
+print("Read JSON into memory")
+
+source_data = []
+target_data = []
+
+def add_data(source, target):
+    # Fix inconsistencies of capitalization in Western languages
+    if source[0].isupper() and target[0].islower():
+        target = target[0].upper() + target[1:]
+    elif source[0].islower() and target[0].isupper():
+        target = target[0].lower() + target[1:]
+    
+    source_data.append(source)
+    target_data.append(target)
+
+for data in wikidata:
+    word = data.get("word")
+    translations = data.get("translations")
+    lang_code = data.get("lang_code")
+    if not word or not translations or word.startswith("-"):
+        continue
+    if lang_code == sl:
+        target_translations = list(filter(lambda x: x.get("code") == tl, translations))
+        if len(target_translations) < 1:
+            continue
+        target_translation = target_translations[0].get("word")
+        if not target_translation:
+            continue
+        
+        add_data(word, target_translation)
+    elif lang_code == tl:
+        target_translations = list(filter(lambda x: x.get("code") == sl, translations))
+        if len(target_translations) < 1:
+            continue
+        target_translation = target_translations[0].get("word")
+        if not target_translation:
+            continue
+        
+        add_data(word, target_translation)
+
+# Extract single word translation data
+"""
+def get_forms(data):
+    to_return = []
+    forms = data.get('forms')
+    if forms:
+        for form in forms:
+            form_value = form.get('form')
+            if form_value != None:
+                to_return.append(form_value)
+    word = data.get('word')
+    if word:
+        to_return.append(word)
+    return to_return
+"""
+
+"""
+for data in wikidata:
+    if data.get('lang_code') != sl:
+        continue
+    senses = data.get('senses')
+    if not senses:
+        # Data doesn't have translations
+        continue
+    translations = []
+    for sense in senses:
+        translation = sense.get('translations')
+        if translation:
+            translations += translation
+    forms = get_forms(data)
+    for translation in translations:
+        if translation.get('code') == tl:
+            translation_value = translation.get('word')
+            if translation_value == None:
+                continue
+            for form in forms:
+                source_data.append(form)
+                target_data.append(translation_value)
+"""
+
+# Special token <define>
+"""
+DEFINE_TOKEN = '<define>'
+for data in wikidata:
+    if data.get('lang_code') not in [sl, tl]:
+        print('Skipping data not in source lang: ' +
+                str(data.get('lang_code')))
+        continue
+    senses = data.get('senses')
+    if not senses:
+        # Data doesn't have translations
+        continue
+    definitions = []
+    forms = get_forms(data)
+    for sense in senses:
+        glosses = sense.get('glosses')
+        if not glosses:
+            continue
+        for gloss in glosses:
+            for form in forms:
+                source_data.append(DEFINE_TOKEN + ' ' + form)
+                target_data.append(gloss)
+"""
+
+# Write to file
+for filename, data in [
+    ("wiktionary." + sl, source_data),
+    ("wiktionary." + tl, target_data),
+]:
+    filename = Path(filename)
+    if not args.force:
+        assert not filename.exists()
+
+    data_file = open(filename, "w", encoding='utf-8')
+    data_file.write("\n".join(data))
+    data_file.close()
+    print("Wrote %s" % filename)
